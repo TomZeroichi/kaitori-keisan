@@ -1,0 +1,530 @@
+<!-- 買取仕入れ計算ツール v3.74（会員：表示＆計算微修正／太枠・割引額合算・ラベル更新） -->
+<div style="all: initial; display:block; width:100%;"><div style="all: revert; writing-mode: horizontal-tb;">
+  <style>
+    .buyback-tool{--bg:#fff;--ink:#111;--muted:#666;--ok:#0a7a32;--bad:#b00020;--card:#f7f7f8;
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+      color:var(--ink); background:var(--bg); max-width:900px; margin:18px auto; padding:16px;}
+    .bb-card{background:var(--card); border-radius:16px; box-shadow:0 2px 10px rgba(0,0,0,.06); padding:18px; margin:12px 0;}
+    .bb-row{display:grid; grid-template-columns:1fr 180px; gap:12px; align-items:end;}
+    .bb-row + .bb-row{margin-top:12px;}
+    .bb-row-jan{grid-template-columns:1fr 180px;}
+    .bb-label{font-size:12px; color:var(--muted); margin-bottom:6px;}
+    .bb-input,.bb-select{width:100%; font-size:20px; padding:10px 12px; border-radius:12px; border:1px solid #ddd; background:#fff;}
+    .bb-input.emph{border:2px solid #333;} /* 太枠（強調） */
+    .bb-input.jan{font-variant-numeric:tabular-nums; letter-spacing:.02em;}
+    .bb-select{appearance:none; background-image:linear-gradient(45deg,transparent 50%,#999 50%),linear-gradient(135deg,#999 50%,transparent 50%);
+      background-position:calc(100% - 18px) 52%, calc(100% - 12px) 52%; background-size:6px 6px,6px 6px; background-repeat:no-repeat;}
+    .bb-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-top:12px;}
+    .bb-pill{background:#fff; border:1px dashed #ccc; border-radius:12px; padding:10px 12px; text-align:center;}
+    .price-big{font-size:36px; font-weight:800; letter-spacing:.02em;}
+    .profit{font-size:28px; font-weight:800;} .profit.ok{color:var(--ok);} .profit.bad{color:var(--bad);}
+    .hint{font-size:12px; color:var(--muted);}
+    .profit-wrap{display:flex; align-items:center; gap:8px;}
+    .bb-btn{font-size:13px; padding:8px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor:pointer;}
+    .bb-btn:active{transform:translateY(1px);}
+    .push-right{margin-left:auto;}
+    .bb-input-group{display:flex; gap:8px; align-items:center;}
+    .bb-input-group .bb-input{flex:1 1 auto;}
+    .bb-btn.clear{white-space:nowrap; padding:8px 10px;}
+
+    .bb-links{display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
+    .bb-linkbtn{display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; min-width:110px;
+      border-radius:999px; border:1px solid #ddd; background:#fff; text-decoration:none; color:#111; font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.06);}
+    .bb-linkbtn:hover{border-color:#bbb;}
+    .bb-linkbtn span{margin-left:6px; font-size:12px; color:#777;}
+
+    .bb-modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:9999;}
+    .bb-modal.show{display:flex;}
+    .bb-modal-box{background:#fff; max-width:520px; width:90%; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.2); padding:18px;}
+    .bb-modal-title{font-size:20px; font-weight:800; margin:0 0 6px;}
+    .bb-modal-body{font-size:14px; color:#666; margin-bottom:14px;}
+    .bb-modal-actions{display:flex; gap:10px; justify-content:flex-end;}
+    .bb-badge{display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#eee; color:#555; margin-left:8px;}
+
+    /* カメラ・スキャナUI（維持） */
+    .scan-wrap{position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:10000; display:none; flex-direction:column; align-items:center; justify-content:center; color:#fff;}
+    .scan-wrap.show{display:flex;}
+    .scan-box{width:min(92vw,560px);}
+    .stage{position:relative; width:100%; padding-top:56.25%; border-radius:12px; overflow:hidden; background:#000; box-shadow:0 10px 30px rgba(0,0,0,.4);}
+    #h5Region, .video-host{position:absolute; inset:0; width:100%; height:100%;}
+    .stage :where(video,canvas,div){position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+    .mask{position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 0 9999px rgba(0,0,0,.28); z-index:2147483645;}
+    .scanline{position:absolute; left:0; width:100%; height:2px;
+      background:linear-gradient(90deg,transparent 0,#ff3b30 20%,#ff3b30 80%,transparent 100%); box-shadow:0 0 10px #ff3b30, 0 0 2px #ff3b30;
+      will-change:transform; pointer-events:none; z-index:2147483646;}
+    .scan-toolbar{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; justify-content:center;}
+    .scan-btn{background:#fff; color:#111; border-radius:10px; border:1px solid #ddd; padding:8px 12px; font-weight:700;}
+    .scan-msg{margin-top:6px; font-size:12px; opacity:.95; text-align:center; color:#ffd;}
+    .scan-hint{margin-top:6px; font-size:12px; opacity:.9; text-align:center;}
+
+    /* Bluetooth HIDパネル（維持） */
+    .hid-wrap{position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:10010; display:none; align-items:center; justify-content:center; color:#fff;}
+    .hid-wrap.show{display:flex;}
+    .hid-box{width:min(92vw,560px); background:#111; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.5); padding:16px;}
+    .hid-title{font-weight:800; margin:0 0 8px;}
+    .hid-display{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:24px; letter-spacing:.06em; background:#000; color:#0ff; padding:12px; border-radius:10px; min-height:44px;}
+    .hid-toolbar{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; justify-content:flex-end;}
+    .hid-btn{background:#fff; color:#111; border-radius:10px; border:1px solid #ddd; padding:8px 12px; font-weight:700;}
+    .hid-hint{margin-top:6px; font-size:12px; opacity:.9; text-align:left; color:#ffd;}
+    .hid-sink{position:absolute; left:-10000px; width:1px; height:1px; opacity:0;}
+
+    #photoInput{position:absolute; left:-9999px; width:1px; height:1px; opacity:0;}
+
+    @media (max-width:680px){
+      .bb-row{grid-template-columns:1fr;}
+      .bb-row-jan{grid-template-columns:1fr;}
+      .bb-grid{grid-template-columns:1fr;}
+      .price-big{font-size:30px;}
+      .bb-input{font-size:18px;}
+    }
+  </style>
+
+  <div class="buyback-tool" id="buybackTool">
+    <h2 style="margin:0 0 8px 0;">買取仕入れ計算ツール（会員）</h2>
+    <div class="hint">仕入価格に割引％・ポイント・クーポンを適用 → <strong>割引後の仕入れ</strong>を算出。買取価格を入れると<strong>利益</strong>と<strong>利益率</strong>を表示します。</div>
+
+    <!-- ▼▼ スクショ対象（仕入〜利益カード） ▼▼ -->
+    <div id="shotArea">
+      <!-- 仕入・割引・ポイント・クーポン -->
+      <div class="bb-card">
+        <div class="bb-row">
+          <div>
+            <div class="bb-label">仕入価格</div>
+            <div class="bb-input-group">
+              <input id="priceBase" class="bb-input emph" type="text" inputmode="numeric" placeholder="例）70,000" value="">
+              <button id="clearBase" class="bb-btn clear" type="button">クリア</button>
+            </div>
+          </div>
+          <div>
+            <div class="bb-label">割引（%OFF）</div>
+            <select id="discountSelect" class="bb-select">
+              <option value="0" selected>0%</option>
+              <option value="1">1%</option>
+              <option value="2">2%</option>
+              <option value="3">3%</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+              <option value="15">15%</option>
+              <option value="20">20%</option>
+              <option value="custom">手入力（任意％）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bb-row" id="customRow" style="display:none;">
+          <div>
+            <div class="bb-label">任意の割引率（%）</div>
+            <input id="discountCustom" class="bb-input" type="number" inputmode="decimal" step="0.01" placeholder="例）12.5">
+          </div><div></div>
+        </div>
+
+        <!-- ポイント・クーポン（割引の下／横並び） -->
+        <div class="bb-row">
+          <div>
+            <div class="bb-label">利用ポイント</div>
+            <input id="pointsUse" class="bb-input" type="text" inputmode="numeric" placeholder="例）500">
+          </div>
+          <div>
+            <div class="bb-label">クーポン（円）</div>
+            <input id="couponYen" class="bb-input" type="text" inputmode="numeric" placeholder="例）300">
+          </div>
+        </div>
+
+        <div class="bb-grid">
+          <div class="bb-pill"><div class="bb-label">割引額（割引％＋ポイント＋クーポン）</div><div id="offAmount" class="price-big">¥0</div></div>
+          <div class="bb-pill"><div class="bb-label">割引後の仕入れ（ポイント・クーポン適用後）</div><div id="priceAfter" class="price-big">¥0</div></div>
+        </div>
+      </div>
+
+      <!-- 買取価格 -->
+      <div class="bb-card">
+        <div class="bb-row">
+          <div>
+            <div class="bb-label">買取価格（売価）</div>
+            <div class="bb-input-group">
+              <input id="priceSell" class="bb-input emph" type="text" inputmode="numeric" placeholder="例）72,000">
+              <button id="clearSell" class="bb-btn clear" type="button">クリア</button>
+            </div>
+          </div>
+          <div>
+            <div class="bb-label">&nbsp;</div>
+            <div class="profit-wrap">
+              <span class="hint">※利益は下段に表示</span>
+              <button id="resetBtn" class="bb-btn push-right" type="button">リセット</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ▲▲ スクショ対象ここまで ▲▲ -->
+
+    <!-- ▼ 最下部：利益表示（正式表示＋利益率） -->
+    <div class="bb-card">
+      <div class="bb-pill" style="background:#fff; border:2px solid #ddd;">
+        <div class="bb-label" style="font-size:14px;">利益（ポイント・クーポン適用後）</div>
+        <div id="profitBig" class="price-big">¥0</div>
+        <div id="profitRate" class="hint" style="margin-top:6px;">利益率 0.0%</div>
+      </div>
+    </div>
+    <!-- ▲ 利益 -->
+
+    <!-- JANコード -->
+    <div class="bb-card">
+      <div class="bb-row-jan bb-row">
+        <div>
+          <div class="bb-label">JANコード</div>
+          <div class="bb-input-group">
+            <input id="janCode" class="bb-input jan" type="text" inputmode="numeric" pattern="[0-9]{8,14}" placeholder="例）4948872415910">
+            <button id="clearJan" class="bb-btn clear" type="button">クリア</button>
+          </div>
+        </div>
+        <div>
+          <div class="bb-label">バーコード読取</div>
+          <button id="scanStart" class="bb-btn" type="button">📷 カメラで読み取る</button>
+          <button id="hidStart" class="bb-btn" type="button" style="margin-top:6px;">📶 Bluetoothスキャナ受信</button>
+          <div class="hint">※BluetoothスキャナはHID（キーボード）モードに設定してください。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 買取店リンク（JAN連動） 順番：市場→ルデヤ→海峡→商店→一丁目 -->
+    <div class="bb-card">
+      <div class="bb-label">買取店リンク <span class="bb-badge">JAN連動</span></div>
+      <div class="bb-links">
+        <a class="bb-linkbtn" href="https://www.kaden-ichiba.com/item/search/" target="_blank" rel="noopener" data-type="support" data-base="https://www.kaden-ichiba.com/item/search/">市場<span>↗</span></a>
+        <a class="bb-linkbtn" href="https://kaitori-rudeya.com/search/index/" target="_blank" rel="noopener" data-type="support" data-base="https://kaitori-rudeya.com/search/index/">ルデヤ<span>↗</span></a>
+        <a class="bb-linkbtn" href="https://www.mobile-ichiban.com/#G01SearchIpt" target="_blank" rel="noopener" data-type="manual" data-name="海峡通信">海峡<span>↗</span></a>
+        <a class="bb-linkbtn" href="https://www.kaitorishouten-co.jp/" target="_blank" rel="noopener" data-type="manual" data-name="買取商店">商店<span>↗</span></a>
+        <a class="bb-linkbtn" href="https://www.1-chome.com/index" target="_blank" rel="noopener" data-type="manual" data-name="一丁目">一丁目<span>↗</span></a>
+      </div>
+      <div class="hint">※「海峡／商店／一丁目」はクリック時にJANコピー案内を表示します。</div>
+    </div>
+  </div>
+
+  <!-- モーダル（JAN手動サイト） -->
+  <div id="janModal" class="bb-modal" aria-hidden="true">
+    <div class="bb-modal-box">
+      <div class="bb-modal-title" id="modalTitle">サイトへ移動</div>
+      <div class="bb-modal-body" id="modalBody">このサイトでは、ユーザー自身でJANを検索する必要があります。</div>
+      <div class="bb-modal-actions">
+        <button id="modalCopyGo" class="bb-btn">📋 コピー＆移動</button>
+        <button id="modalGo" class="bb-btn">↗ 移動</button>
+        <button id="modalClose" class="bb-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- カメラスキャナ（維持） -->
+  <div id="scanWrap" class="scan-wrap" aria-hidden="true">
+    <div class="scan-box">
+      <div class="stage" id="stage">
+        <div id="h5Region"></div>
+        <div class="mask"></div>
+        <div class="scanline" id="scanLine"></div>
+      </div>
+      <div class="scan-toolbar">
+        <button id="scanStop" class="scan-btn" type="button">停止</button>
+        <button id="scanClose" class="scan-btn" type="button">閉じる</button>
+        <button id="newtabBtn" class="scan-btn" type="button">🪟 新規タブでスキャン</button>
+        <button id="diagBtn" class="scan-btn" type="button">🛠 環境診断</button>
+      </div>
+      <div id="scanMsg" class="scan-msg"></div>
+      <div class="scan-hint">赤線をバーコードに重ねてください（中央付近で上下往復）。</div>
+    </div>
+  </div>
+
+  <!-- Bluetooth HID 受信パネル（維持） -->
+  <div id="hidWrap" class="hid-wrap" aria-hidden="true">
+    <div class="hid-box">
+      <h3 class="hid-title">Bluetoothスキャナ受信</h3>
+      <div id="hidDisplay" class="hid-display"></div>
+      <div class="hid-toolbar">
+        <button id="hidClear" class="hid-btn" type="button">クリア</button>
+        <button id="hidStop" class="hid-btn" type="button">停止</button>
+        <button id="hidClose" class="hid-btn" type="button">閉じる</button>
+      </div>
+      <div class="hid-hint">スキャナのトリガーを引いてください。Enter/Tabで確定、サフィックス無でも入力停止で自動確定します。</div>
+      <input id="hidSink" class="hid-sink" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+  </div>
+
+  <!-- 画像から読み取る（維持） -->
+  <input id="photoInput" type="file" accept="image/*" capture="environment">
+  <div class="bb-card" style="text-align:center;"><label for="photoInput" class="bb-btn">📷 写真から読み取る</label></div>
+  <img id="photoPreview" alt="" style="display:none;"/>
+
+  <!-- 効果音 -->
+  <audio id="beep" preload="auto"
+    src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAAAgP8AAP8AgICAAAD/AP8A/wAAAP8A/wCAgIAAAAD/AP8A"></audio>
+
+  <script>
+  (function(){
+    const $=id=>document.getElementById(id);
+    const inIframe = (function(){ try{ return window.self !== window.top; }catch(_){ return true; } })();
+    function loadScriptChain(urls){ return new Promise((res,rej)=>{ (function n(i){ if(i>=urls.length) return rej(); const s=document.createElement("script"); s.src=urls[i]; s.onload=()=>res(urls[i]); s.onerror=()=>n(i+1); document.head.appendChild(s); })(0); }); }
+
+    /* 3桁カンマ入力 */
+    function fmtInput(el){
+      const raw=(el.value||"").replace(/[^\d]/g,"");
+      if(raw===""){ el.value=""; return; }
+      const sel=el.selectionStart, before=(el.value||"").length;
+      el.value=Number(raw).toLocaleString("ja-JP");
+      const after=(el.value||"").length, diff=after-before;
+      try{ el.setSelectionRange((sel||after)+diff,(sel||after)+diff);}catch(_){}
+    }
+
+    /* ===== 計算 ===== */
+    const priceBase=$("priceBase"), discountSel=$("discountSelect"), customRow=$("customRow"),
+          discountCustom=$("discountCustom"), offAmount=$("offAmount"), priceAfter=$("priceAfter"),
+          priceSell=$("priceSell"), resetBtn=$("resetBtn"), janCode=$("janCode"),
+          clearBase=$("clearBase"), clearSell=$("clearSell"), clearJan=$("clearJan"),
+          pointsUse=$("pointsUse"), couponYen=$("couponYen"),
+          profitBig=$("profitBig"), profitRateEl=$("profitRate");
+
+    const jpy=n=>!isFinite(n)?"¥0":"¥"+Math.round(n).toLocaleString("ja-JP");
+    const num=v=>{ const n=parseFloat(String(v).replace(/,/g,"")); return isFinite(n)?n:0; };
+    const currentRate=()=> (discountSel.value==="custom" ? Math.max(0, num(discountCustom.value)||0) : num(discountSel.value));
+
+    function clampNonNegative(el){
+      let v=Math.max(0, num(el.value));
+      const formatted = v ? v.toLocaleString("ja-JP") : "";
+      if(el.value!==formatted) el.value=formatted;
+      return v;
+    }
+
+    function recalc(){
+      const base = Math.max(0, num(priceBase.value));
+      const rate = Math.max(0, Math.min(100, currentRate()));
+      const offByRate  = base * (rate/100);
+
+      // ポイント・クーポン
+      const points = clampNonNegative(pointsUse);
+      const coupon = clampNonNegative(couponYen);
+
+      // 割引額＝ 割引（％）＋ ポイント ＋ クーポン
+      const totalOff = offByRate + points + coupon;
+      offAmount.textContent = jpy(totalOff);
+
+      // 割引後の仕入れ（ポイント・クーポンも反映）
+      let after = base - totalOff;
+      if(after < 0) after = 0;
+      priceAfter.textContent= jpy(after);
+
+      // 売価
+      const sell = Math.max(0, num(priceSell.value));
+
+      // 利益＝ 買取価格 − 割引後の仕入れ
+      const pf = sell - after;
+      profitBig.textContent = jpy(pf);
+      profitBig.style.color = pf>=0 ? "var(--ok)" : "var(--bad)";
+
+      // 利益率＝ 利益 / 割引後の仕入れ
+      const pr = after>0 ? (pf/after*100) : 0;
+      profitRateEl.textContent = "利益率 " + (isFinite(pr)?pr.toFixed(1):"0.0") + "%";
+    }
+
+    function updateJanLinks(){
+      const jan=(janCode.value||"").trim();
+      document.querySelectorAll(".bb-linkbtn[data-type='support']").forEach(a=>{
+        const base=a.getAttribute("data-base")||""; a.href = jan ? (base+encodeURIComponent(jan)) : base;
+      });
+    }
+
+    // 初期
+    recalc(); updateJanLinks();
+
+    // 入力イベント（カンマ整形＋再計算）
+    [priceBase, priceSell, pointsUse, couponYen].forEach(el=>{
+      el && el.addEventListener("input", ()=>{ fmtInput(el); recalc(); });
+    });
+    [discountCustom, janCode].forEach(el=> el && el.addEventListener("input", ()=>{ recalc(); updateJanLinks(); }));
+
+    // クリアボタン
+    clearBase && clearBase.addEventListener("click", ()=>{ priceBase.value=""; recalc(); });
+    clearSell && clearSell.addEventListener("click", ()=>{ priceSell.value=""; recalc(); });
+    clearJan  && clearJan.addEventListener("click",  ()=>{ janCode.value=""; updateJanLinks(); });
+
+    // 割引選択
+    discountSel && discountSel.addEventListener("change", ()=>{
+      customRow.style.display=(discountSel.value==="custom")?"grid":"none";
+      if(discountSel.value!=="custom"){ discountCustom.value=""; }
+      recalc();
+    });
+
+    // リセット
+    resetBtn && resetBtn.addEventListener("click", ()=>{
+      priceBase.value=""; priceSell.value="";
+      pointsUse.value=""; couponYen.value="";
+      discountSel.value="0"; discountCustom.value=""; customRow.style.display="none";
+      recalc();
+    });
+
+    /* ===== 手動検索モーダル（維持） ===== */
+    const modal=$("janModal"), modalTitle=$("modalTitle"), modalBody=$("modalBody"),
+          modalCopyGo=$("modalCopyGo"), modalGo=$("modalGo"), modalClose=$("modalClose");
+    document.querySelectorAll(".bb-linkbtn[data-type='manual']").forEach(a=>{
+      a.addEventListener("click",(e)=>{ e.preventDefault();
+        const site=a.getAttribute("data-name")||"サイト";
+        modalTitle.textContent=site+"へ移動";
+        modalBody.textContent=site+"では、ユーザー自身でJANを検索する必要があります。";
+        modal.classList.add("show"); modal.setAttribute("aria-hidden","false");
+        modalCopyGo.onclick=async ()=>{ try{ await navigator.clipboard.writeText((janCode.value||"").trim()); }catch(_){} window.open(a.href,"_blank","noopener"); modalClose.click(); };
+        modalGo.onclick=()=>{ window.open(a.href,"_blank","noopener"); modalClose.click(); };
+      });
+    });
+    modalClose&&modalClose.addEventListener("click", ()=>{ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); });
+    modal&&modal.addEventListener("click",(e)=>{ if(e.target===modal) modalClose.click(); });
+
+    /* ===== スキャナ（維持：html5-qrcode→BarcodeDetector→ZXing／3回一致＋効果音） ===== */
+    const scanWrap=$("scanWrap"), h5Region=$("h5Region"), stage=$("stage"),
+          scanStart=$("scanStart"), scanStop=$("scanStop"), scanClose=$("scanClose"),
+          newtabBtn=$("newtabBtn"), diagBtnEl=$("diagBtn"), scanMsg=$("scanMsg"), scanLine=$("scanLine"), beep=$("beep");
+    const photoInput=$("photoInput");
+    let html5q=null, h5Loaded=false, scanning=false;
+    let mediaStream=null, zxingReader=null, roiCanvas=null, roiCtx=null, videoEl=null, lineId=null;
+
+    function loadHtml5(){ if(h5Loaded) return Promise.resolve();
+      const c=[location.origin+"/assets/html5-qrcode.min.js","https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/minified/html5-qrcode.min.js","https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js","https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.10/html5-qrcode.min.js"];
+      return loadScriptChain(c).then(()=>{ h5Loaded=true; });
+    }
+    function loadZXing(){ if(window.ZXing) return Promise.resolve();
+      const c=[location.origin+"/assets/zxing.min.js","https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js","https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js","https://cdnjs.cloudflare.com/ajax/libs/zxing/0.19.1/zxing.min.js"];
+      return loadScriptChain(c);
+    }
+
+    function animateScanline(){
+      const H=stage.getBoundingClientRect().height;
+      const center=H*0.5, amp=H*0.40, speed=1800; let t0=null;
+      function step(ts){ if(!scanWrap.classList.contains("show")) return; if(!t0) t0=ts;
+        const phase=((ts-t0)%speed)/speed; const y=center + Math.sin(phase*2*Math.PI)*amp*0.5;
+        scanLine.style.transform="translate3d(0,"+y+"px,0)"; lineId=requestAnimationFrame(step);
+      }
+      cancelAnimationFrame(lineId); lineId=requestAnimationFrame(step);
+    }
+    function showScanUI(){ scanWrap.classList.add("show"); scanWrap.setAttribute("aria-hidden","false"); animateScanline(); }
+    function hideScanUI(){ scanWrap.classList.remove("show"); scanWrap.setAttribute("aria-hidden","true"); cancelAnimationFrame(lineId); }
+
+    scanStart&&scanStart.addEventListener("click", ()=>{ showScanUI(); startEmbeddedScan(); });
+
+    let lastVal="", sameCount=0;
+    function confirm3(code){ const v=String(code||"").replace(/\D/g,""); if(v.length<8||v.length>14) return null; sameCount=(v===lastVal)?sameCount+1:1; lastVal=v; return sameCount>=3?v:null; }
+    function beepOk(){ try{ beep.currentTime=0; beep.play().catch(()=>{}); }catch(_){ } try{ navigator.vibrate&&navigator.vibrate(60);}catch(_){ } }
+
+    function startEmbeddedScan(){
+      scanMsg.textContent = inIframe ? "※ 埋め込み表示は拒否されやすいです。新規タブスキャンがより確実です。" : "カメラを起動しています…";
+      sameCount=0; lastVal="";
+      loadHtml5().then(()=>{
+        if(!window.Html5Qrcode) throw 0;
+        if(!html5q) html5q=new Html5Qrcode(h5Region,{verbose:false});
+        const cfg={ fps:22, qrbox:(w,h)=>({width:Math.floor(w*0.88), height:Math.floor(h*0.40)}),
+          aspectRatio:16/9, showTorchButtonIfSupported:true,
+          experimentalFeatures:{useBarCodeDetectorIfSupported:true},
+          formatsToSupport:[ Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.ITF ] };
+        const onSuccess=t=>{ const ok=confirm3(t); if(ok) finalizeScan(ok); };
+        return html5q.start({facingMode:{ideal:"environment"}}, cfg, onSuccess, ()=>{});
+      }).then(()=>{ scanning=true; scanMsg.textContent="読み取り中…（赤線に合わせてください）"; })
+        .catch(()=>{ if("BarcodeDetector" in window) startNativeDetector(); else startZXingFallback(); });
+    }
+    function stopEmbeddedScan(close){
+      try{ if(scanning && html5q){ html5q.stop().then(()=>html5q.clear()).catch(()=>{}); } }catch(_){}
+      scanning=false;
+      if(mediaStream){ try{ mediaStream.getTracks().forEach(t=>t.stop()); }catch(_){ } mediaStream=null; }
+      if(zxingReader){ try{ zxingReader.reset(); }catch(_){ } zxingReader=null; }
+      if(videoEl){ try{ videoEl.pause(); videoEl.srcObject=null; videoEl.remove(); }catch(_){ } videoEl=null; }
+      if(roiCanvas){ try{ roiCanvas.remove(); }catch(_){ } roiCanvas=null; roiCtx=null; }
+      if(close) hideScanUI();
+    }
+    scanStop&&scanStop.addEventListener("click", ()=>stopEmbeddedScan(false));
+    scanClose&&scanClose.addEventListener("click", ()=>stopEmbeddedScan(true));
+
+    function finalizeScan(code){ janCode.value=code; updateJanLinks(); try{ beepOk(); }catch(_){ } stopEmbeddedScan(true); }
+
+    function startNativeDetector(){
+      scanMsg.textContent="ネイティブ検出で起動中…";
+      navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720}, focusMode:"continuous" }, audio:false })
+      .then(stream=>{ mediaStream=stream; videoEl=document.createElement("video"); videoEl.setAttribute("playsinline",""); videoEl.setAttribute("autoplay",""); videoEl.muted=true;
+        h5Region.innerHTML=""; h5Region.appendChild(videoEl); videoEl.srcObject=mediaStream; return videoEl.play(); })
+      .then(()=>{ roiCanvas=document.createElement("canvas"); roiCtx=roiCanvas.getContext("2d",{willReadFrequently:true}); roiCanvas.style.display="none"; h5Region.appendChild(roiCanvas);
+        const det=new window.BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','itf']});
+        (function loop(){ if(!mediaStream) return; const W=videoEl.videoWidth,H=videoEl.videoHeight; if(!W||!H){ requestAnimationFrame(loop); return; }
+          const bh=Math.floor(H*0.40), y=Math.floor((H-bh)/2); roiCanvas.width=W; roiCanvas.height=bh;
+          roiCtx.filter="contrast(1.35) brightness(1.08)"; roiCtx.drawImage(videoEl,0,y,W,bh,0,0,W,bh);
+          det.detect(roiCanvas).then(cs=>{ if(cs&&cs.length){ const ok=confirm3((cs[0].rawValue||"")); if(ok){ finalizeScan(ok); return; } } requestAnimationFrame(loop); })
+            .catch(()=>{ requestAnimationFrame(loop); });
+        })(); scanMsg.textContent="読み取り中…"; })
+      .catch(()=>startZXingFallback());
+    }
+
+    function startZXingFallback(){
+      scanMsg.textContent="ZXingフォールバックで起動中…";
+      loadZXing().then(()=>navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720} }, audio:false }))
+      .then(stream=>{ mediaStream=stream; videoEl=document.createElement("video"); videoEl.setAttribute("playsinline",""); videoEl.setAttribute("autoplay",""); videoEl.muted=true;
+        h5Region.innerHTML=""; h5Region.appendChild(videoEl); videoEl.srcObject=mediaStream; return videoEl.play(); })
+      .then(()=>{ const ZX=window.ZXing; const hints=new Map(); hints.set(ZX.DecodeHintType.TRY_HARDER,true); hints.set(ZX.DecodeHintType.ALSO_INVERTED,true);
+        hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E,ZX.BarcodeFormat.CODE_128,ZX.BarcodeFormat.ITF]);
+        zxingReader=new ZX.BrowserMultiFormatReader(hints,400);
+        return zxingReader.listVideoInputDevices().then(devs=>{ let rear=null; if(devs&&devs.length){ for(let i=0;i<devs.length;i++) if(/back|rear|environment|外側|背面|world/i.test(devs[i].label)){ rear=devs[i]; break; } if(!rear) rear=devs[devs.length-1]; }
+          zxingReader.decodeFromVideoDevice(rear?rear.deviceId:undefined, videoEl, r=>{ if(r&&r.text){ const ok=confirm3(r.text); if(ok) finalizeScan(ok); } });
+          scanMsg.textContent="読み取り中…"; });
+      }).catch(()=>{ scanMsg.textContent="カメラ開始に失敗。HTTPS/権限をご確認ください。"; });
+    }
+
+    /* ===== Bluetooth HID スキャナ受信（維持） ===== */
+    const hidWrap=$("hidWrap"), hidDisplay=$("hidDisplay"), hidSink=$("hidSink"),
+          hidStart=$("hidStart"), hidStop=$("hidStop"), hidClose=$("hidClose"), hidClear=$("hidClear");
+
+    let hidBuf="", hidTimer=null, hidPrevLen=0;
+
+    function showHid(){ hidWrap.classList.add("show"); hidWrap.setAttribute("aria-hidden","false"); hidDisplay.textContent=""; hidBuf=""; hidPrevLen=0;
+      setTimeout(()=>{ try{ hidSink.value=""; hidSink.focus({preventScroll:true}); }catch(_){ } }, 0);
+    }
+    function hideHid(){ hidWrap.classList.remove("show"); hidWrap.setAttribute("aria-hidden","true"); clearTimeout(hidTimer); hidTimer=null; }
+    function updateDisp(){ hidDisplay.textContent = hidBuf || ""; }
+    function finishIfValid(){
+      const v=hidBuf.replace(/\D/g,"");
+      if(v.length>=8 && v.length<=14){
+        janCode.value=v; updateJanLinks(); try{ $("beep").currentTime=0; $("beep").play().catch(()=>{});}catch(_){ } try{ navigator.vibrate&&navigator.vibrate(60);}catch(_){}
+        hideHid();
+      }else{ updateDisp(); }
+    }
+    function scheduleIdleFinish(){ clearTimeout(hidTimer); hidTimer=setTimeout(()=>{ finishIfValid(); }, 220); }
+
+    hidStart && hidStart.addEventListener("click", showHid);
+    hidClose && hidClose.addEventListener("click", hideHid);
+    hidStop  && hidStop.addEventListener("click", ()=>{ finishIfValid(); });
+    hidClear && hidClear.addEventListener("click", ()=>{ hidBuf=""; hidPrevLen=0; hidSink.value=""; updateDisp(); setTimeout(()=>hidSink.focus(),0); });
+
+    hidSink && hidSink.addEventListener("input", ()=>{
+      const s=hidSink.value||""; const inc=s.slice(hidPrevLen); hidPrevLen=s.length;
+      if(inc){ const digits=inc.replace(/[^\d]/g,""); if(digits){ hidBuf += digits; updateDisp(); scheduleIdleFinish(); } }
+    });
+    hidSink && hidSink.addEventListener("keydown",(e)=>{
+      const k=e.key; if(k==="Enter"||k==="Tab"){ e.preventDefault(); finishIfValid(); }
+      else if(k==="Escape"){ e.preventDefault(); hideHid(); }
+    });
+
+    /* ===== 新規タブ受信・環境診断・画像から読み取る（維持） ===== */
+    window.addEventListener("message",(e)=>{ const d=e&&e.data; if(!d||d.type!=="jan-scanned") return; const v=String(d.value||"").replace(/\D/g,"");
+      if(v && v.length>=8 && v.length<=14){ janCode.value=v; updateJanLinks(); try{ $("beep").currentTime=0; $("beep").play().catch(()=>{});}catch(_){ } scanWrap.classList.remove("show"); scanWrap.setAttribute("aria-hidden","true"); } });
+
+    $("diagBtn")&&$("diagBtn").addEventListener("click", ()=>{ const secure=location.protocol==="https:"||["localhost","127.0.0.1"].includes(location.hostname);
+      $("scanMsg").textContent=[(secure?"✅":"❌")+" HTTPS/localhost",(navigator.mediaDevices?"✅":"❌")+" mediaDevicesあり",(inIframe?"⚠":"✅")+" "+(inIframe?"iframe表示":"トップ表示")].join(" / "); });
+
+    function ensureHtml5(){ return loadHtml5().catch(()=>{}); }
+    const photoInputEl=$("photoInput");
+    photoInputEl&&photoInputEl.addEventListener("change",(e)=>{
+      const file=e.target.files&&e.target.files[0]; if(!file) return;
+      const url=URL.createObjectURL(file), img=new Image();
+      img.onload=function(){
+        ensureHtml5().then(()=>{ if(window.Html5Qrcode){ return Html5Qrcode.scanFile(img,true,[ Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.ITF ])
+          .then(r=>{ const v=String(r||"").replace(/\D/g,""); if(v){ janCode.value=v; updateJanLinks(); try{ $("beep").currentTime=0; $("beep").play().catch(()=>{});}catch(_){ } } }).catch(()=>{}); } })
+        .then(()=>{ if(!window.ZXing) return loadZXing(); })
+        .then(()=>{ if(window.ZXing){ const reader=new ZXing.BrowserMultiFormatReader(); return reader.decodeFromImage(img).catch(()=>null).then(res=>{ if(res&&res.text){ const v=res.text.replace(/\D/g,""); if(v){ janCode.value=v; updateJanLinks(); try{ $("beep").currentTime=0; $("beep").play().catch(()=>{});}catch(_){ } } } else { alert("画像から読み取れませんでした。バーコードがはっきり写った写真をお試しください。"); } }); }
+               else { alert("画像から読み取れませんでした。"); } })
+        .finally(()=>{ URL.revokeObjectURL(url); e.target.value=""; });
+      }; img.src=url;
+    });
+
+  })();
+  </script>
+</div></div>
