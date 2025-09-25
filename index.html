@@ -1,6 +1,19 @@
-<!-- 買取仕入れ計算ツール v3.74（会員：表示＆計算微修正／太枠・割引額合算・ラベル更新） -->
-<div style="all: initial; display:block; width:100%;"><div style="all: revert; writing-mode: horizontal-tb;">
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>買取仕入れ計算ツール（会員）</title>
+  <meta name="description" content="仕入価格に割引・ポイント・クーポンを適用して割引後の仕入れと利益を計算。JANコード検索、カメラ/Bluetoothスキャン対応。">
+  <meta name="color-scheme" content="light">
   <style>
+    /* ===== 買取仕入れ計算ツール v3.75 GitHub Edition =====
+       - 前回仕様維持
+       - ラベル修正：「/正式表示」削除
+       - 割引額＝割引％＋ポイント＋クーポン
+       - 仕入価格/買取価格：太枠
+       - ポイント/クーポン：文言・横並び
+    */
     .buyback-tool{--bg:#fff;--ink:#111;--muted:#666;--ok:#0a7a32;--bad:#b00020;--card:#f7f7f8;
       font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
       color:var(--ink); background:var(--bg); max-width:900px; margin:18px auto; padding:16px;}
@@ -26,13 +39,11 @@
     .bb-input-group{display:flex; gap:8px; align-items:center;}
     .bb-input-group .bb-input{flex:1 1 auto;}
     .bb-btn.clear{white-space:nowrap; padding:8px 10px;}
-
     .bb-links{display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
     .bb-linkbtn{display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; min-width:110px;
       border-radius:999px; border:1px solid #ddd; background:#fff; text-decoration:none; color:#111; font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.06);}
     .bb-linkbtn:hover{border-color:#bbb;}
     .bb-linkbtn span{margin-left:6px; font-size:12px; color:#777;}
-
     .bb-modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:9999;}
     .bb-modal.show{display:flex;}
     .bb-modal-box{background:#fff; max-width:520px; width:90%; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.2); padding:18px;}
@@ -40,8 +51,7 @@
     .bb-modal-body{font-size:14px; color:#666; margin-bottom:14px;}
     .bb-modal-actions{display:flex; gap:10px; justify-content:flex-end;}
     .bb-badge{display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#eee; color:#555; margin-left:8px;}
-
-    /* カメラ・スキャナUI（維持） */
+    /* スキャナUI */
     .scan-wrap{position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:10000; display:none; flex-direction:column; align-items:center; justify-content:center; color:#fff;}
     .scan-wrap.show{display:flex;}
     .scan-box{width:min(92vw,560px);}
@@ -56,8 +66,7 @@
     .scan-btn{background:#fff; color:#111; border-radius:10px; border:1px solid #ddd; padding:8px 12px; font-weight:700;}
     .scan-msg{margin-top:6px; font-size:12px; opacity:.95; text-align:center; color:#ffd;}
     .scan-hint{margin-top:6px; font-size:12px; opacity:.9; text-align:center;}
-
-    /* Bluetooth HIDパネル（維持） */
+    /* Bluetooth HID */
     .hid-wrap{position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:10010; display:none; align-items:center; justify-content:center; color:#fff;}
     .hid-wrap.show{display:flex;}
     .hid-box{width:min(92vw,560px); background:#111; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.5); padding:16px;}
@@ -67,9 +76,7 @@
     .hid-btn{background:#fff; color:#111; border-radius:10px; border:1px solid #ddd; padding:8px 12px; font-weight:700;}
     .hid-hint{margin-top:6px; font-size:12px; opacity:.9; text-align:left; color:#ffd;}
     .hid-sink{position:absolute; left:-10000px; width:1px; height:1px; opacity:0;}
-
     #photoInput{position:absolute; left:-9999px; width:1px; height:1px; opacity:0;}
-
     @media (max-width:680px){
       .bb-row{grid-template-columns:1fr;}
       .bb-row-jan{grid-template-columns:1fr;}
@@ -78,7 +85,8 @@
       .bb-input{font-size:18px;}
     }
   </style>
-
+</head>
+<body>
   <div class="buyback-tool" id="buybackTool">
     <h2 style="margin:0 0 8px 0;">買取仕入れ計算ツール（会員）</h2>
     <div class="hint">仕入価格に割引％・ポイント・クーポンを適用 → <strong>割引後の仕入れ</strong>を算出。買取価格を入れると<strong>利益</strong>と<strong>利益率</strong>を表示します。</div>
@@ -118,7 +126,7 @@
           </div><div></div>
         </div>
 
-        <!-- ポイント・クーポン（割引の下／横並び） -->
+        <!-- ポイント・クーポン -->
         <div class="bb-row">
           <div>
             <div class="bb-label">利用ポイント</div>
@@ -131,8 +139,14 @@
         </div>
 
         <div class="bb-grid">
-          <div class="bb-pill"><div class="bb-label">割引額（割引％＋ポイント＋クーポン）</div><div id="offAmount" class="price-big">¥0</div></div>
-          <div class="bb-pill"><div class="bb-label">割引後の仕入れ（ポイント・クーポン適用後）</div><div id="priceAfter" class="price-big">¥0</div></div>
+          <div class="bb-pill">
+            <div class="bb-label">割引額（割引％＋ポイント＋クーポン）</div>
+            <div id="offAmount" class="price-big">¥0</div>
+          </div>
+          <div class="bb-pill">
+            <div class="bb-label">割引後の仕入れ（ポイント・クーポン適用後）</div>
+            <div id="priceAfter" class="price-big">¥0</div>
+          </div>
         </div>
       </div>
 
@@ -158,7 +172,7 @@
     </div>
     <!-- ▲▲ スクショ対象ここまで ▲▲ -->
 
-    <!-- ▼ 最下部：利益表示（正式表示＋利益率） -->
+    <!-- ▼ 最下部：利益表示 -->
     <div class="bb-card">
       <div class="bb-pill" style="background:#fff; border:2px solid #ddd;">
         <div class="bb-label" style="font-size:14px;">利益（ポイント・クーポン適用後）</div>
@@ -166,7 +180,6 @@
         <div id="profitRate" class="hint" style="margin-top:6px;">利益率 0.0%</div>
       </div>
     </div>
-    <!-- ▲ 利益 -->
 
     <!-- JANコード -->
     <div class="bb-card">
@@ -214,7 +227,7 @@
     </div>
   </div>
 
-  <!-- カメラスキャナ（維持） -->
+  <!-- カメラスキャナ -->
   <div id="scanWrap" class="scan-wrap" aria-hidden="true">
     <div class="scan-box">
       <div class="stage" id="stage">
@@ -233,7 +246,7 @@
     </div>
   </div>
 
-  <!-- Bluetooth HID 受信パネル（維持） -->
+  <!-- Bluetooth HID 受信パネル -->
   <div id="hidWrap" class="hid-wrap" aria-hidden="true">
     <div class="hid-box">
       <h3 class="hid-title">Bluetoothスキャナ受信</h3>
@@ -248,7 +261,7 @@
     </div>
   </div>
 
-  <!-- 画像から読み取る（維持） -->
+  <!-- 画像から読み取る -->
   <input id="photoInput" type="file" accept="image/*" capture="environment">
   <div class="bb-card" style="text-align:center;"><label for="photoInput" class="bb-btn">📷 写真から読み取る</label></div>
   <img id="photoPreview" alt="" style="display:none;"/>
@@ -261,9 +274,36 @@
   (function(){
     const $=id=>document.getElementById(id);
     const inIframe = (function(){ try{ return window.self !== window.top; }catch(_){ return true; } })();
-    function loadScriptChain(urls){ return new Promise((res,rej)=>{ (function n(i){ if(i>=urls.length) return rej(); const s=document.createElement("script"); s.src=urls[i]; s.onload=()=>res(urls[i]); s.onerror=()=>n(i+1); document.head.appendChild(s); })(0); }); }
 
-    /* 3桁カンマ入力 */
+    /* ========= 汎用ローダ（./assets → CDN フォールバック） ========= */
+    function loadScriptChain(urls){
+      return new Promise((res,rej)=>{
+        (function n(i){
+          if(i>=urls.length) return rej();
+          const s=document.createElement("script"); s.src=urls[i];
+          s.onload=()=>res(urls[i]); s.onerror=()=>n(i+1);
+          document.head.appendChild(s);
+        })(0);
+      });
+    }
+    function loadHtml5(){
+      if(window.__h5_loaded) return Promise.resolve();
+      const c=["./assets/html5-qrcode.min.js",
+               "https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/minified/html5-qrcode.min.js",
+               "https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js",
+               "https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.10/html5-qrcode.min.js"];
+      return loadScriptChain(c).then(()=>{ window.__h5_loaded=true; });
+    }
+    function loadZXing(){
+      if(window.ZXing) return Promise.resolve();
+      const c=["./assets/zxing.min.js",
+               "https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js",
+               "https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js",
+               "https://cdnjs.cloudflare.com/ajax/libs/zxing/0.19.1/zxing.min.js"];
+      return loadScriptChain(c);
+    }
+
+    /* ========= 3桁カンマ整形 ========= */
     function fmtInput(el){
       const raw=(el.value||"").replace(/[^\d]/g,"");
       if(raw===""){ el.value=""; return; }
@@ -273,7 +313,7 @@
       try{ el.setSelectionRange((sel||after)+diff,(sel||after)+diff);}catch(_){}
     }
 
-    /* ===== 計算 ===== */
+    /* ========= 計算 ========= */
     const priceBase=$("priceBase"), discountSel=$("discountSelect"), customRow=$("customRow"),
           discountCustom=$("discountCustom"), offAmount=$("offAmount"), priceAfter=$("priceAfter"),
           priceSell=$("priceSell"), resetBtn=$("resetBtn"), janCode=$("janCode"),
@@ -296,29 +336,17 @@
       const base = Math.max(0, num(priceBase.value));
       const rate = Math.max(0, Math.min(100, currentRate()));
       const offByRate  = base * (rate/100);
-
-      // ポイント・クーポン
       const points = clampNonNegative(pointsUse);
       const coupon = clampNonNegative(couponYen);
-
-      // 割引額＝ 割引（％）＋ ポイント ＋ クーポン
-      const totalOff = offByRate + points + coupon;
+      const totalOff = offByRate + points + coupon;        // 合計割引
       offAmount.textContent = jpy(totalOff);
-
-      // 割引後の仕入れ（ポイント・クーポンも反映）
       let after = base - totalOff;
       if(after < 0) after = 0;
       priceAfter.textContent= jpy(after);
-
-      // 売価
       const sell = Math.max(0, num(priceSell.value));
-
-      // 利益＝ 買取価格 − 割引後の仕入れ
       const pf = sell - after;
       profitBig.textContent = jpy(pf);
       profitBig.style.color = pf>=0 ? "var(--ok)" : "var(--bad)";
-
-      // 利益率＝ 利益 / 割引後の仕入れ
       const pr = after>0 ? (pf/after*100) : 0;
       profitRateEl.textContent = "利益率 " + (isFinite(pr)?pr.toFixed(1):"0.0") + "%";
     }
@@ -359,7 +387,7 @@
       recalc();
     });
 
-    /* ===== 手動検索モーダル（維持） ===== */
+    /* ===== 手動検索モーダル ===== */
     const modal=$("janModal"), modalTitle=$("modalTitle"), modalBody=$("modalBody"),
           modalCopyGo=$("modalCopyGo"), modalGo=$("modalGo"), modalClose=$("modalClose");
     document.querySelectorAll(".bb-linkbtn[data-type='manual']").forEach(a=>{
@@ -375,22 +403,12 @@
     modalClose&&modalClose.addEventListener("click", ()=>{ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); });
     modal&&modal.addEventListener("click",(e)=>{ if(e.target===modal) modalClose.click(); });
 
-    /* ===== スキャナ（維持：html5-qrcode→BarcodeDetector→ZXing／3回一致＋効果音） ===== */
+    /* ===== スキャナ（html5-qrcode→BarcodeDetector→ZXing / 3回一致＋効果音） ===== */
     const scanWrap=$("scanWrap"), h5Region=$("h5Region"), stage=$("stage"),
           scanStart=$("scanStart"), scanStop=$("scanStop"), scanClose=$("scanClose"),
           newtabBtn=$("newtabBtn"), diagBtnEl=$("diagBtn"), scanMsg=$("scanMsg"), scanLine=$("scanLine"), beep=$("beep");
     const photoInput=$("photoInput");
-    let html5q=null, h5Loaded=false, scanning=false;
-    let mediaStream=null, zxingReader=null, roiCanvas=null, roiCtx=null, videoEl=null, lineId=null;
-
-    function loadHtml5(){ if(h5Loaded) return Promise.resolve();
-      const c=[location.origin+"/assets/html5-qrcode.min.js","https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/minified/html5-qrcode.min.js","https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js","https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.10/html5-qrcode.min.js"];
-      return loadScriptChain(c).then(()=>{ h5Loaded=true; });
-    }
-    function loadZXing(){ if(window.ZXing) return Promise.resolve();
-      const c=[location.origin+"/assets/zxing.min.js","https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js","https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js","https://cdnjs.cloudflare.com/ajax/libs/zxing/0.19.1/zxing.min.js"];
-      return loadScriptChain(c);
-    }
+    let html5q=null, scanning=false, mediaStream=null, zxingReader=null, roiCanvas=null, roiCtx=null, videoEl=null, lineId=null;
 
     function animateScanline(){
       const H=stage.getBoundingClientRect().height;
@@ -436,7 +454,6 @@
     }
     scanStop&&scanStop.addEventListener("click", ()=>stopEmbeddedScan(false));
     scanClose&&scanClose.addEventListener("click", ()=>stopEmbeddedScan(true));
-
     function finalizeScan(code){ janCode.value=code; updateJanLinks(); try{ beepOk(); }catch(_){ } stopEmbeddedScan(true); }
 
     function startNativeDetector(){
@@ -469,10 +486,9 @@
       }).catch(()=>{ scanMsg.textContent="カメラ開始に失敗。HTTPS/権限をご確認ください。"; });
     }
 
-    /* ===== Bluetooth HID スキャナ受信（維持） ===== */
+    /* ===== Bluetooth HID スキャナ受信 ===== */
     const hidWrap=$("hidWrap"), hidDisplay=$("hidDisplay"), hidSink=$("hidSink"),
           hidStart=$("hidStart"), hidStop=$("hidStop"), hidClose=$("hidClose"), hidClear=$("hidClear");
-
     let hidBuf="", hidTimer=null, hidPrevLen=0;
 
     function showHid(){ hidWrap.classList.add("show"); hidWrap.setAttribute("aria-hidden","false"); hidDisplay.textContent=""; hidBuf=""; hidPrevLen=0;
@@ -503,15 +519,9 @@
       else if(k==="Escape"){ e.preventDefault(); hideHid(); }
     });
 
-    /* ===== 新規タブ受信・環境診断・画像から読み取る（維持） ===== */
-    window.addEventListener("message",(e)=>{ const d=e&&e.data; if(!d||d.type!=="jan-scanned") return; const v=String(d.value||"").replace(/\D/g,"");
-      if(v && v.length>=8 && v.length<=14){ janCode.value=v; updateJanLinks(); try{ $("beep").currentTime=0; $("beep").play().catch(()=>{});}catch(_){ } scanWrap.classList.remove("show"); scanWrap.setAttribute("aria-hidden","true"); } });
-
-    $("diagBtn")&&$("diagBtn").addEventListener("click", ()=>{ const secure=location.protocol==="https:"||["localhost","127.0.0.1"].includes(location.hostname);
-      $("scanMsg").textContent=[(secure?"✅":"❌")+" HTTPS/localhost",(navigator.mediaDevices?"✅":"❌")+" mediaDevicesあり",(inIframe?"⚠":"✅")+" "+(inIframe?"iframe表示":"トップ表示")].join(" / "); });
-
-    function ensureHtml5(){ return loadHtml5().catch(()=>{}); }
+    /* ===== 画像から読み取る ===== */
     const photoInputEl=$("photoInput");
+    function ensureHtml5(){ return loadHtml5().catch(()=>{}); }
     photoInputEl&&photoInputEl.addEventListener("change",(e)=>{
       const file=e.target.files&&e.target.files[0]; if(!file) return;
       const url=URL.createObjectURL(file), img=new Image();
@@ -525,6 +535,24 @@
       }; img.src=url;
     });
 
+    // 新規タブスキャン受信（必要時拡張可能）
+    window.addEventListener("message",(e)=>{
+      const d=e&&e.data; if(!d||d.type!=="jan-scanned") return;
+      const v=String(d.value||"").replace(/\D/g,"");
+      if(v && v.length>=8 && v.length<=14){
+        janCode.value=v; updateJanLinks();
+        try{ $("beep").currentTime=0; $("beep").play().catch(()=>{});}catch(_){}
+        scanWrap.classList.remove("show"); scanWrap.setAttribute("aria-hidden","true");
+      }
+    });
+
+    // 環境診断
+    $("diagBtn")&&$("diagBtn").addEventListener("click", ()=>{
+      const secure=location.protocol==="https:"||["localhost","127.0.0.1"].includes(location.hostname);
+      $("scanMsg").textContent=[(secure?"✅":"❌")+" HTTPS/localhost",(navigator.mediaDevices?"✅":"❌")+" mediaDevicesあり",(inIframe?"⚠":"✅")+" "+(inIframe?"iframe表示":"トップ表示")].join(" / ");
+    });
+
   })();
   </script>
-</div></div>
+</body>
+</html>
